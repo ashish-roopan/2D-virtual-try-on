@@ -55,7 +55,7 @@ class cloth_dataset(Dataset):
         garment_image = cv2.imread(garment_img_name, cv2.IMREAD_UNCHANGED)
 
         #hstack face and garment image
-        face_image_bg = np.ones_like(garment_image) * 120
+        face_image_bg = np.zeros_like(garment_image) 
         face_image_bg[0:face_image.shape[0], 0:face_image.shape[1]] = face_image
         full_image = np.hstack((face_image_bg, garment_image))
 
