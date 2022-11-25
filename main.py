@@ -61,22 +61,26 @@ model.fc = Fc(in_features=model.fc.in_features, out_features=4)
 model = model.to(args.device)
 
 ############ HYPERPARAMETERS ############
-best_valid_loss = 10
-lr = 0.00001
+best_valid_loss = 0.104
+lr = 0.01
 momentum = 0.9
-weight_decay = 0.01
+weight_decay = 0.001
 epochs = args.num_epochs
+criteria = torch.nn.SmoothL1Loss()
+# criteria = torch.nn.MSELoss()
 optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
 scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=0.01, steps_per_epoch=len(train_dataloader), epochs=epochs)
+# scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.1)
+# scheduler = None
 
 if args.load_model:
     checkpoint = torch.load(args.model_path)
     model.load_state_dict(checkpoint['model'])
-    # optimizer.load_state_dict(checkpoint['optimizer'])
-    # scheduler = checkpoint['lr_sched']
+    optimizer.load_state_dict(checkpoint['optimizer'])
+    scheduler = checkpoint['lr_sched']
     start_epoch = checkpoint['epoch']
-    # best_valid_loss = checkpoint['best_valid_loss']
-    best_valid_loss = 0.12
+    best_valid_loss = checkpoint['best_valid_loss']
+    best_valid_loss = 0.104
     lr = scheduler.get_last_lr()
 
 
@@ -92,14 +96,15 @@ wandb.config = {
 
 ############ TRAINING ############
 for epoch in range(epochs):
-    train_loss = train_epoch(model, optimizer, train_dataloader, scheduler, args.device, wandb)
-    val_loss = validate_epoch(model, valid_dataloader, args.device, wandb)
+    train_loss = train_epoch(model, optimizer, train_dataloader, criteria, scheduler, args.device, wandb)
+    val_loss = validate_epoch(model, valid_dataloader, criteria, args.device, wandb)
 
     avg_train_loss = train_loss / len(train_dataloader)
     avg_val_loss = val_loss / len(valid_dataloader)
 
     print('Epoch: {} \tTraining Loss: {:.6f} \tValidation Loss: {:.6f} '.format(start_epoch + epoch, avg_train_loss, avg_val_loss))
 
+    ## display predicted and GT images
     if args.debug and epoch % 1 == 0:
         train_debug_disp = debug_disp(model, train_dataloader, args.device)
         valid_debug_disp = debug_disp(model, valid_dataloader, args.device)
@@ -112,7 +117,7 @@ for epoch in range(epochs):
     if args.save_model:
         model_name = model.__class__.__name__
         if avg_val_loss < best_valid_loss:
-            model_path = f'{args.model_path.split("/")[0]}/{model_name}__{epoch}__{avg_train_loss:.3f}__{avg_val_loss:.3f}.pt'
+            model_path = f'{args.model_path.split("/")[0]}/{model_name}__{start_epoch + epoch}__{avg_train_loss:.3f}__{avg_val_loss:.3f}.pt'
             print(f'saving model: {model_path}')
             checkpoint = { 
                 'epoch': start_epoch + epoch,
@@ -122,4 +127,4 @@ for epoch in range(epochs):
                 'best_valid_loss': best_valid_loss,
                 }
             torch.save(checkpoint, model_path)
-            val_loss_threshold = avg_val_loss
+            best_valid_loss = avg_val_loss

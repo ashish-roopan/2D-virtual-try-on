@@ -1,7 +1,7 @@
 import torch
 
 
-def validate_epoch(model, dataloader, device,  wandb=None):
+def validate_epoch(model, dataloader, criteria, device,  wandb=None):
     valid_loss = 0.0
     model.eval()
     for i, (full_image, inputs, labels) in enumerate(dataloader):
@@ -12,8 +12,9 @@ def validate_epoch(model, dataloader, device,  wandb=None):
             outputs = model(inputs)
             
             # Compute loss
-            diff = outputs - labels
-            loss = torch.norm(diff, dim=1, p=2).square().mean()
+            loss = criteria(outputs, labels)
+            # diff = outputs - labels
+            # loss = torch.norm(diff, dim=1, p=2).square().mean()
             valid_loss += loss.item() * inputs.size(0)
 
             #wandb logging
