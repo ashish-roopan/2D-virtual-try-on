@@ -59,14 +59,14 @@ class cloth_dataset(Dataset):
         face_image_bg[0:face_image.shape[0], 0:face_image.shape[1]] = face_image
         full_image = np.hstack((face_image_bg, garment_image))
 
-        image = cv2.cvtColor(full_image, cv2.COLOR_BGR2RGB)
         
         # transform
+        image = cv2.cvtColor(full_image, cv2.COLOR_BGR2RGB)
         if self.transform:
             augmented = self.transform(image=image)
             image = augmented['image']
 
-        #get label
+        #get label (bbox)
         label_name = os.path.join(self.root_dir, self.labels[idx])
         position_data = json.load(open(label_name))
         x = position_data['x']
@@ -78,8 +78,7 @@ class cloth_dataset(Dataset):
 
         return full_image, image, position
 
-
-   
+  
 
     
 def get_transforms():
